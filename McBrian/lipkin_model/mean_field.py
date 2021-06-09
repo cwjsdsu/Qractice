@@ -56,3 +56,4 @@ def Jz_analytic(theta):
 def JpJm_analytic(theta):
     return 0.5*(np.sin(2*theta))**2
 
+

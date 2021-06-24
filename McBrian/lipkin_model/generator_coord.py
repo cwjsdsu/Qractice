@@ -1,4 +1,6 @@
 import numpy as np
+import qiskit as qk
+import mean_field
 
 '''
  Generator Coordinate/Solving generator coordinate wave function
@@ -7,22 +9,31 @@ import numpy as np
     - Also for n_angles < N, eigenvalues of H start to be degenerate
 '''
 def numerical(N,e,chi, theta):
-    eps = 0.0001
     n_angles = theta.size
-    norm = np.zeros((n_angles,n_angles))
     h = np.zeros((n_angles,n_angles))
+    inv_root_norm = get_inverse_root_norm(N,theta)
 
     for i in range(n_angles):
         for j in range(n_angles):
-            # Fill norm kernel
-            norm[i][j] = np.cos(theta[i] - theta[j]) **N
             # Fill H array
-            h[i][j] = -N*e/2 * np.cos(theta[i] - theta[j])**(N-2) 
+            h[i][j] = -N*e/2 * np.cos(theta[i] - theta[j])**(N-2)
             temp = np.cos(theta[i])**2 * np.sin(theta[j])**2 + np.cos(theta[j])**2 * np.sin(theta[i])**2
             h[i][j] = h[i][j] * (np.cos(theta[i] - theta[j])*np.cos(theta[i] + theta[j]) + chi*(temp))
-            
-    v,u = np.linalg.eig(norm)
-    invroot_norm = np.zeros((n_angles,n_angles))
+
+    return np.linalg.eigvalsh(inv_root_norm @ h @ inv_root_norm)
+
+
+def get_inverse_root_norm(N,theta):
+    eps = 0.0001
+    n_angles = theta.size
+    norm = np.zeros((n_angles,n_angles))
+    inv_root_norm = np.zeros((n_angles,n_angles))
+
+    for i in range(n_angles):
+        for j in range(n_angles):
+            norm[i][j] = np.cos(theta[i] - theta[j]) **N
+
+    v,u = np.linalg.eigh(norm)
 
     for i in range(n_angles):
         for j in range(n_angles):
@@ -31,9 +42,50 @@ def numerical(N,e,chi, theta):
                     # casting to real to avoid error
                     # does not cause issues because eigenvalues of real symm matrices
                     # should be real anyways
-                    invroot_norm[i][j] += np.real(u[i][r] * u[j][r] / np.sqrt(v[r])) 
+                    inv_root_norm[i][j] += np.real(u[i][r] * u[j][r] / np.sqrt(v[r]))
+    return inv_root_norm
 
-    H = invroot_norm @ h @ invroot_norm
+
+# Variational Circuit: Generator Coordinate method ---------------
+
+def Jz_circuit(theta, phi, n_shots,backend):
+    qc = qk.QuantumCircuit(2,2)
+
+    qc.h(0)
+    qc.ry(2*theta, 1)
+
+    qc.cry(2*phi, 0,1)
+
+    qc.h(0)
+
+    qc.measure(0,0)
+    qc.measure(1,1)
+
+    exp_values = qk.execute(qc, backend, shots=n_shots)
+    results = exp_values.result().get_counts()
+
+    return mean_field.exp_value([1.,-1.,-1.,1], results, n_shots)
+
+
+def JpJm_circuit(theta, phi, n_shots,backend):
+    qc = qk.QuantumCircuit(3,3)
+
+    qc.h(0)
+    qc.ry(2*theta, 1)
+    qc.ry(2*theta, 2)
+
+    qc.cry(2*phi, 0,1)
+    qc.cry(2*phi, 0,2)
+    qc.cx(1,2)
     
-    return np.linalg.eigvalsh(H)
+    qc.h(0)
+    qc.h(1)
+    
+    qc.measure(0,0)
+    qc.measure(1,1)
+    qc.measure(2,2)
 
+    exp_values = qk.execute(qc, backend, shots=n_shots)
+    results = exp_values.result().get_counts()
+
+    return mean_field.exp_value([1.,-1.,-1.,1.,0,0,0,0], results, n_shots)

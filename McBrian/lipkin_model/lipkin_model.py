@@ -1,5 +1,11 @@
 import numpy as np
 
+
+
+def hamiltonian(e,V,Jz,JpJm):
+    return -e*Jz - V/2. * JpJm
+
+
 ''' 
  Find the eigenvalues of the Lipkin Model Hamiltonian
     N - system size

@@ -48,11 +48,12 @@ def get_inverse_root_norm(N,theta):
 
 # Variational Circuit: Generator Coordinate method ---------------
 
-def Jz_circuit(theta, phi, n_shots,backend):
+def Jz_circuit(theta_i, theta_j, n_shots,backend):
     qc = qk.QuantumCircuit(2,2)
+    phi = theta_j-theta_i
 
     qc.h(0)
-    qc.ry(2*theta, 1)
+    qc.ry(2*theta_i, 1)
 
     qc.cry(2*phi, 0,1)
 
@@ -67,12 +68,13 @@ def Jz_circuit(theta, phi, n_shots,backend):
     return mean_field.exp_value([1.,-1.,-1.,1], results, n_shots)
 
 
-def JpJm_circuit(theta, phi, n_shots,backend):
+def JpJm_circuit(theta_i, theta_j, n_shots,backend):
     qc = qk.QuantumCircuit(3,3)
+    phi = theta_j - theta_i
 
     qc.h(0)
-    qc.ry(2*theta, 1)
-    qc.ry(2*theta, 2)
+    qc.ry(2*theta_i, 1)
+    qc.ry(2*theta_i, 2)
 
     qc.cry(2*phi, 0,1)
     qc.cry(2*phi, 0,2)

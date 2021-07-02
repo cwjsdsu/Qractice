@@ -90,4 +90,5 @@ def JpJm_circuit(theta_i, theta_j, n_shots,backend):
     exp_values = qk.execute(qc, backend, shots=n_shots)
     results = exp_values.result().get_counts()
 
+#    return mean_field.exp_value([1.,0,-1.,0,-1.,0,1.,0], results, n_shots)
     return mean_field.exp_value([1.,-1.,-1.,1.,0,0,0,0], results, n_shots)

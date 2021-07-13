@@ -48,7 +48,34 @@ def get_inverse_root_norm(N,theta):
 
 # Variational Circuit: Generator Coordinate method ---------------
 
-def Jz_circuit(theta_i, theta_j, n_shots,backend):
+def overlap_circuit(theta_i,theta_j,backend, n_shots):
+    qc = qk.QuantumCircuit(2,1)
+    phi = theta_j - theta_i
+    
+    qc.h(0)
+    qc.ry(2*theta_i,1)
+    
+    qc.cry(2*phi,0,1)
+    qc.h(0)
+    qc.measure(0,0)
+    
+    exp_values = qk.execute(qc, backend, shots=n_shots)
+    results = exp_values.result().get_counts()
+    return mean_field.exp_value([1.,-1.], results, n_shots)
+
+
+def diag_jz_circuit(theta,backend,n_shots):
+    qc = qk.QuantumCircuit(1,1)
+    
+    qc.ry(2*theta,0)
+    qc.measure(0,0)
+    
+    exp_values = qk.execute(qc, backend, shots=n_shots)
+    results = exp_values.result().get_counts()
+    return 0.5*mean_field.exp_value([1.,-1.], results, n_shots)
+
+
+def offdiag_jz_circuit(theta_i, theta_j, backend, n_shots):
     qc = qk.QuantumCircuit(2,2)
     phi = theta_j-theta_i
 
@@ -65,10 +92,25 @@ def Jz_circuit(theta_i, theta_j, n_shots,backend):
     exp_values = qk.execute(qc, backend, shots=n_shots)
     results = exp_values.result().get_counts()
 
-    return mean_field.exp_value([1.,-1.,-1.,1], results, n_shots)
+    return 0.5*mean_field.exp_value([1.,-1.,-1.,1], results, n_shots)
 
 
-def JpJm_circuit(theta_i, theta_j, n_shots,backend):
+def diag_pm_circuit(theta,backend,n_shots):
+    qc = qk.QuantumCircuit(2,2)
+
+    qc.ry(2*theta,0)
+    qc.ry(2*theta,1)
+    qc.cx(0,1)
+    qc.h(0)
+    qc.measure(0,0)
+    qc.measure(1,1)
+
+    exp_values = qk.execute(qc, backend, shots=n_shots)
+    results = exp_values.result().get_counts()
+    return mean_field.exp_value([1.,-1.,0,0], results, n_shots)
+
+
+def offdiag_pm_circuit(theta_i, theta_j, backend, n_shots):
     qc = qk.QuantumCircuit(3,3)
     phi = theta_j - theta_i
 
@@ -90,5 +132,19 @@ def JpJm_circuit(theta_i, theta_j, n_shots,backend):
     exp_values = qk.execute(qc, backend, shots=n_shots)
     results = exp_values.result().get_counts()
 
-#    return mean_field.exp_value([1.,0,-1.,0,-1.,0,1.,0], results, n_shots)
     return mean_field.exp_value([1.,-1.,-1.,1.,0,0,0,0], results, n_shots)
+
+def expected_overlap(theta_i,theta_j):
+    return np.cos(theta_j - theta_i)
+
+def expected_diag_jz(theta):
+    return 0.5*np.cos(2*theta)
+
+def expected_offdiag_jz(theta_i, theta_j):
+    return 0.5*np.cos(theta_i + theta_j)
+
+def expected_diag_pm(theta):
+    return 0.5*np.sin(2*theta)**2
+
+def expected_offdiag_pm(theta_i, theta_j):
+    return np.cos(theta_i)**2 * np.sin(theta_j)**2 + np.cos(theta_j)**2 * np.sin(theta_i)**2
